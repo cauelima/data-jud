@@ -90,7 +90,6 @@ https://www.cnj.jus.br/sgt/versoes_tabelas/planilhas/{versao}_Tabela_{tabela}_Ju
 
 Acessando "Versões anteriores" e comparando as URLs geradas: o prefixo numérico passou de `79` para `78`, mantido todo o restante do caminho.
 
-> 🚨 **Risco documentado:** o coletor funciona enquanto a versão 79 for a corrente. Quando o CNJ publicar a versão 80, as URLs fixas retornarão erro. A mitigação natural é consultar a versão vigente antes de montar as URLs.
 
 ### Observação sobre o mecanismo da página
 
@@ -154,3 +153,89 @@ Os nomes de arquivo usam grafia **sem acento**: `Justica`, não `Justiça`. A gr
 ---
 
 *Levantamento realizado em 07/09/2026 · TPU versão 79*
+
+---
+Continuação em 12/09/2026
+
+## 9. Natureza real do arquivo servido
+
+### O que o servidor declara
+
+| Cabeçalho | Valor |
+|---|---|
+| `Content-Type` | `application/vnd.ms-excel` |
+| `Content-Length` | `6406489` (≈ 6,4 MB) |
+| `Last-Modified` | `Tue, 26 May 2026 18:37:05 GMT` |
+| `Accept-Ranges` | `bytes` |
+
+### O que o conteúdo é de fato
+
+**HTML**, não Excel binário. Os primeiros caracteres da resposta:
+
+```html
+<table border=1><tr><td colspan=5 style='font-size:14pt;width: 150px'>
+<b>Assuntos processuais do 2º Grau da Justiça Estadual</b></td>
+<td align=center><b>Código</b><td align=center><b>Cód. Pai</b>...
+```
+
+Não há `<html>`, `<head>` ou `<body>`. É um **fragmento de tabela HTML** servido com cabeçalho MIME de Excel — prática antiga, que funciona porque o Excel abre tabela HTML sem reclamar.
+
+### Como foi verificado
+
+Requisição GET com inspeção de `resposta.headers` e dos 500 primeiros caracteres de `resposta.text`.
+
+---
+
+## 10. Codificação de caracteres
+
+Os acentos chegam corrompidos quando o conteúdo é lido como texto sem declaração explícita de codificação:
+
+| Recebido | Esperado |
+|---|---|
+| `2ş Grau` | `2º Grau` |
+| `Alteraçőes` | `Alterações` |
+| `Data de Publicaçăo` | `Data de Publicação` |
+
+**Causa provável.** O servidor não declara `charset` no `Content-Type`. Sem essa informação, a codificação é inferida — e a inferência erra.
+
+---
+
+## 11. Estrutura das colunas
+
+Colunas identificadas no cabeçalho da tabela de Assuntos:
+
+| Coluna | Observação |
+|---|---|
+| Código | identificador do item |
+| **Cód. Pai** | **referência hierárquica — é o que sustenta o MP2** |
+| Dispositivo legal | |
+| Artigo | |
+| Alterações | |
+| Glossário | |
+| Objetivo de Desenvolvimento Sustentável | |
+| Data de Publicação | |
+| Data de Alteração | |
+
+O arquivo se autoidentifica na primeira célula: *"Assuntos processuais do 2º Grau da Justiça Estadual"*. 
+
+---
+
+## 12. Volume
+
+Cerca de **6,4 MB** por arquivo (medido em Assuntos 2º grau).
+
+Implicações registradas:
+
+- o `timeout` da coleta precisa acomodar download desse porte — valores de poucos segundos tendem a produzir falha falsa
+- seis arquivos de porte semelhante somam volume relevante, o que reforça a decisão de manter a camada bruta fora do repositório
+
+---
+
+## Resumo dos achados
+
+| # | Achado | Afeta |
+|---|---|---|
+| 1 | conteúdo é HTML apesar do `.xls` e do MIME de Excel | leitura no Pandas |
+| 2 | acentuação corrompida por codificação não declarada | leitura e tradução de rótulos |
+| 3 | coluna `Cód. Pai` presente no arquivo | modelagem hierárquica (MP2) |
+| 4 | ~6,4 MB por arquivo | `timeout` e política de versionamento dos dados |

@@ -1,5 +1,8 @@
 PIPELINE DE DADOS DO JUDICIÁRIO BRASILEIRO - DATAJUD - CNJ
 
+Projeto que busca criar um pipeline dos dados abertos do judiciário brasileiro, possibilitando consultas e análises, como: qual vara julga mais? Quais varas com o mesmo acervo é mais rápida? A Vara x está dentro da média de julgamento ou acervo?
+Foi escolhido o primeiro e segundo grau da justiça comum e do juizado, ambos cíveis, por serem as áreas de maiores abrangências e com maior quantidade de processos, além de ter mais impacto prático por julgarem temas comuns ao cidadão médio.
+
 ## Status
 
 🚧 Em construção. Etapa atual: **MP1 — Coletor da TPU**.
